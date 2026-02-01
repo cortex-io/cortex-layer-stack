@@ -1,0 +1,248 @@
+# Cortex Layer Stack - Default Values
+# Each layer is a self-contained burst-capable AI service stack
+
+# Layer identification
+layer:
+  name: ""  # Required: e.g., "infrastructure", "security", "networking"
+  description: ""
+  domain: ""  # Optional: DNS domain for the layer
+
+# Global settings
+global:
+  registry: "10.43.170.72:5000"
+  imagePullPolicy: IfNotPresent
+  storageClass: "local-path"
+
+  # Shared labels applied to all resources
+  labels:
+    app.kubernetes.io/part-of: cortex
+    cortex.ai/architecture: distributed-layer
+
+# Scale-to-zero configuration
+autoscaling:
+  enabled: true
+  # Idle timeout before scaling to zero (seconds)
+  idleTimeout: 300
+  # Cooldown period after scaling (seconds)
+  cooldownPeriod: 30
+  # Minimum replicas (0 for scale-to-zero)
+  minReplicas: 0
+  # Maximum replicas during burst
+  maxReplicas: 3
+
+  # KEDA triggers
+  triggers:
+    # Scale based on HTTP requests
+    http:
+      enabled: true
+      metadata:
+        targetPendingRequests: "10"
+    # Scale based on Prometheus metrics
+    prometheus:
+      enabled: false
+      serverAddress: ""
+      metricName: ""
+      threshold: "100"
+    # Scale based on message queue depth
+    rabbitmq:
+      enabled: false
+      queueName: ""
+      queueLength: "10"
+
+# MoE Router configuration
+moeRouter:
+  enabled: true
+  image:
+    repository: cortex-moe-router
+    tag: latest
+
+  # Resources for burst mode
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+  # Expert routing configuration
+  routing:
+    # Number of experts to route to per request
+    topK: 2
+    # Load balancing strategy: "round-robin", "least-loaded", "affinity"
+    strategy: "affinity"
+    # Cache routing decisions
+    cacheEnabled: true
+    cacheTTL: 3600
+
+  # Model configuration
+  model:
+    # Base model for routing decisions
+    base: "sentence-transformers/all-MiniLM-L6-v2"
+    # Fine-tuned weights (optional, for specialized layers)
+    weights: ""
+
+  # Telemetry for distillation
+  telemetry:
+    enabled: true
+    # Capture routing decisions for training
+    captureDecisions: true
+    # Sample rate (1.0 = all, 0.1 = 10%)
+    sampleRate: 1.0
+    # Export destination
+    exportTo: "qdrant"  # or "s3", "kafka"
+
+# Qdrant Vector Database configuration
+qdrant:
+  enabled: true
+  image:
+    repository: qdrant/qdrant
+    tag: v1.7.4
+
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+
+  # Storage configuration
+  storage:
+    # Persistent storage for vectors (survives scale-to-zero)
+    enabled: true
+    size: "10Gi"
+    # Snapshot configuration
+    snapshots:
+      enabled: true
+      schedule: "0 2 * * *"  # Daily at 2 AM
+      retention: 7
+
+  # Collection configuration
+  collections:
+    # Auto-create collections for this layer
+    autoCreate: true
+    # Default vector dimensions
+    vectorSize: 384
+    # Distance metric: "Cosine", "Euclid", "Dot"
+    distance: "Cosine"
+
+  # Telemetry for distillation
+  telemetry:
+    enabled: true
+    # Capture query patterns
+    captureQueries: true
+    # Capture result relevance
+    captureRelevance: true
+
+# MCP Server configuration
+mcpServer:
+  enabled: true
+  image:
+    repository: cortex-mcp-server
+    tag: latest
+
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+  # Tool configuration
+  tools:
+    # Auto-discover tools from layer domain
+    autoDiscover: true
+    # Explicit tool list (if autoDiscover is false)
+    explicit: []
+    # Tool timeout (seconds)
+    timeout: 30
+
+  # Protocol configuration
+  protocol:
+    # Transport: "stdio", "http", "websocket"
+    transport: "http"
+    port: 8080
+
+  # Telemetry for distillation
+  telemetry:
+    enabled: true
+    # Capture tool invocations
+    captureInvocations: true
+    # Capture success/failure patterns
+    captureOutcomes: true
+
+# Distillation pipeline configuration
+distillation:
+  enabled: false
+
+  # Data collection
+  collection:
+    # Minimum samples before distillation eligible
+    minSamples: 10000
+    # Quality threshold (0-1)
+    qualityThreshold: 0.8
+    # Storage for training data
+    storage:
+      type: "s3"  # or "pvc", "qdrant"
+      bucket: ""
+      prefix: "distillation/"
+
+  # Model output
+  output:
+    # Target model type: "lora", "full", "gguf"
+    type: "lora"
+    # Base model for LoRA
+    baseModel: "meta-llama/Llama-2-7b"
+    # Rank for LoRA adapters
+    loraRank: 16
+    # Output location
+    registry: ""
+
+  # Automation
+  automation:
+    # Auto-trigger distillation when criteria met
+    autoTrigger: false
+    # Cron schedule for distillation jobs
+    schedule: ""
+
+# Observability
+observability:
+  # Prometheus metrics
+  metrics:
+    enabled: true
+    port: 9090
+    path: "/metrics"
+
+  # Distributed tracing
+  tracing:
+    enabled: true
+    # Jaeger or OTLP endpoint
+    endpoint: ""
+    sampleRate: 0.1
+
+  # Logging
+  logging:
+    level: "info"
+    format: "json"
+
+# Network policies
+networkPolicy:
+  enabled: true
+  # Allow ingress from these namespaces
+  allowedNamespaces:
+    - cortex-gateway
+  # Allow egress to these services
+  allowedEgress:
+    - dns
+    - prometheus
+
+# Service mesh integration
+serviceMesh:
+  # Linkerd injection
+  linkerd:
+    enabled: false
+  # Istio injection
+  istio:
+    enabled: false

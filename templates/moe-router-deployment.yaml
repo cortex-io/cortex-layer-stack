@@ -1,0 +1,121 @@
+{{- if .Values.moeRouter.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cortex-layer-stack.moeRouter.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cortex-layer-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: moe-router
+  annotations:
+    cortex.ai/burst-capable: "true"
+    cortex.ai/distillation-source: "routing-decisions"
+spec:
+  replicas: {{ .Values.autoscaling.minReplicas }}
+  selector:
+    matchLabels:
+      {{- include "cortex-layer-stack.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: moe-router
+  template:
+    metadata:
+      labels:
+        {{- include "cortex-layer-stack.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: moe-router
+        cortex.ai/layer: {{ .Values.layer.name | quote }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.observability.metrics.port }}"
+        prometheus.io/path: "{{ .Values.observability.metrics.path }}"
+    spec:
+      containers:
+        - name: moe-router
+          image: {{ include "cortex-layer-stack.image" (dict "root" . "image" .Values.moeRouter.image) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.observability.metrics.port }}
+              protocol: TCP
+          env:
+            - name: LAYER_NAME
+              value: {{ .Values.layer.name | quote }}
+            - name: QDRANT_HOST
+              value: {{ include "cortex-layer-stack.qdrant.name" . }}
+            - name: QDRANT_PORT
+              value: "6333"
+            - name: ROUTING_TOP_K
+              value: {{ .Values.moeRouter.routing.topK | quote }}
+            - name: ROUTING_STRATEGY
+              value: {{ .Values.moeRouter.routing.strategy | quote }}
+            - name: CACHE_ENABLED
+              value: {{ .Values.moeRouter.routing.cacheEnabled | quote }}
+            - name: CACHE_TTL
+              value: {{ .Values.moeRouter.routing.cacheTTL | quote }}
+            - name: TELEMETRY_ENABLED
+              value: {{ .Values.moeRouter.telemetry.enabled | quote }}
+            - name: TELEMETRY_CAPTURE_DECISIONS
+              value: {{ .Values.moeRouter.telemetry.captureDecisions | quote }}
+            - name: TELEMETRY_SAMPLE_RATE
+              value: {{ .Values.moeRouter.telemetry.sampleRate | quote }}
+            - name: TELEMETRY_EXPORT_TO
+              value: {{ .Values.moeRouter.telemetry.exportTo | quote }}
+            {{- if .Values.moeRouter.model.weights }}
+            - name: MODEL_WEIGHTS
+              value: {{ .Values.moeRouter.model.weights | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.moeRouter.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: model-cache
+              mountPath: /models
+            {{- if .Values.moeRouter.telemetry.enabled }}
+            - name: telemetry-buffer
+              mountPath: /telemetry
+            {{- end }}
+      volumes:
+        - name: model-cache
+          emptyDir:
+            sizeLimit: 2Gi
+        {{- if .Values.moeRouter.telemetry.enabled }}
+        - name: telemetry-buffer
+          emptyDir:
+            sizeLimit: 1Gi
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cortex-layer-stack.moeRouter.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cortex-layer-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: moe-router
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: {{ .Values.observability.metrics.port }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "cortex-layer-stack.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: moe-router
+{{- end }}

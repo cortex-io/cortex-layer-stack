@@ -1,0 +1,158 @@
+{{- if .Values.distillation.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Values.layer.name }}-distillation
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cortex-layer-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: distillation
+spec:
+  schedule: {{ .Values.distillation.automation.schedule | default "0 3 * * 0" | quote }}  # Weekly Sunday 3AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            {{- include "cortex-layer-stack.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: distillation
+            cortex.ai/layer: {{ .Values.layer.name | quote }}
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: distillation-pipeline
+              image: {{ .Values.global.registry }}/cortex-distillation-pipeline:latest
+              imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+              env:
+                - name: LAYER_NAME
+                  value: {{ .Values.layer.name | quote }}
+                - name: QDRANT_HOST
+                  value: {{ include "cortex-layer-stack.qdrant.name" . }}
+                - name: QDRANT_PORT
+                  value: "6333"
+                - name: MIN_SAMPLES
+                  value: {{ .Values.distillation.collection.minSamples | quote }}
+                - name: QUALITY_THRESHOLD
+                  value: {{ .Values.distillation.collection.qualityThreshold | quote }}
+                - name: OUTPUT_TYPE
+                  value: {{ .Values.distillation.output.type | quote }}
+                - name: BASE_MODEL
+                  value: {{ .Values.distillation.output.baseModel | quote }}
+                - name: LORA_RANK
+                  value: {{ .Values.distillation.output.loraRank | quote }}
+                {{- if .Values.distillation.output.registry }}
+                - name: OUTPUT_REGISTRY
+                  value: {{ .Values.distillation.output.registry | quote }}
+                {{- end }}
+                - name: STORAGE_TYPE
+                  value: {{ .Values.distillation.collection.storage.type | quote }}
+                {{- if eq .Values.distillation.collection.storage.type "s3" }}
+                - name: S3_BUCKET
+                  value: {{ .Values.distillation.collection.storage.bucket | quote }}
+                - name: S3_PREFIX
+                  value: {{ .Values.distillation.collection.storage.prefix | quote }}
+                {{- end }}
+              resources:
+                requests:
+                  cpu: "1000m"
+                  memory: "4Gi"
+                limits:
+                  cpu: "4000m"
+                  memory: "16Gi"
+                  # GPU for training if available
+                  # nvidia.com/gpu: "1"
+              volumeMounts:
+                - name: training-workspace
+                  mountPath: /workspace
+          volumes:
+            - name: training-workspace
+              emptyDir:
+                sizeLimit: 50Gi
+---
+# ConfigMap for distillation configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.layer.name }}-distillation-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cortex-layer-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: distillation
+data:
+  config.yaml: |
+    layer: {{ .Values.layer.name }}
+
+    # Data collection settings
+    collection:
+      sources:
+        - type: moe_routing_decisions
+          qdrant_collection: {{ .Values.layer.name }}_routing
+          fields:
+            - input_embedding
+            - selected_expert
+            - confidence_score
+            - latency_ms
+        - type: tool_invocations
+          qdrant_collection: {{ .Values.layer.name }}_tools
+          fields:
+            - tool_name
+            - input_params
+            - output_result
+            - success
+            - duration_ms
+        - type: vector_queries
+          qdrant_collection: {{ .Values.layer.name }}_queries
+          fields:
+            - query_embedding
+            - results
+            - relevance_scores
+
+      quality_filters:
+        min_confidence: {{ .Values.distillation.collection.qualityThreshold }}
+        min_success_rate: 0.9
+        exclude_anomalies: true
+
+    # Training configuration
+    training:
+      type: {{ .Values.distillation.output.type }}
+      base_model: {{ .Values.distillation.output.baseModel }}
+      {{- if eq .Values.distillation.output.type "lora" }}
+      lora:
+        rank: {{ .Values.distillation.output.loraRank }}
+        alpha: {{ mul .Values.distillation.output.loraRank 2 }}
+        dropout: 0.05
+        target_modules:
+          - q_proj
+          - v_proj
+          - k_proj
+          - o_proj
+      {{- end }}
+
+      hyperparameters:
+        learning_rate: 2e-5
+        batch_size: 8
+        gradient_accumulation_steps: 4
+        epochs: 3
+        warmup_ratio: 0.1
+        weight_decay: 0.01
+
+      evaluation:
+        split_ratio: 0.1
+        metrics:
+          - accuracy
+          - latency
+          - routing_agreement
+
+    # Output configuration
+    output:
+      registry: {{ .Values.distillation.output.registry | default .Values.global.registry }}
+      naming: "{{ .Values.layer.name }}-specialist-v{version}"
+      metadata:
+        layer: {{ .Values.layer.name }}
+        distilled_from: "operational-telemetry"
+        samples_used: "{sample_count}"
+{{- end }}

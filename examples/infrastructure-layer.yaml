@@ -1,0 +1,57 @@
+# Example: Infrastructure Operations Layer
+# Deploy with: helm install infra-layer ./cortex-layer-stack -f infrastructure-layer.yaml -n cortex-infrastructure
+
+layer:
+  name: infrastructure
+  description: "Kubernetes, Proxmox, and cloud infrastructure operations"
+  domain: "infra.cortex.local"
+
+autoscaling:
+  enabled: true
+  idleTimeout: 600  # 10 minutes - infra tasks are sporadic
+  minReplicas: 0
+  maxReplicas: 2
+
+moeRouter:
+  enabled: true
+  routing:
+    topK: 2
+    strategy: "affinity"
+  telemetry:
+    enabled: true
+    captureDecisions: true
+    sampleRate: 1.0
+
+qdrant:
+  enabled: true
+  storage:
+    enabled: true
+    size: "20Gi"  # Infrastructure docs, runbooks, past incidents
+  collections:
+    vectorSize: 768  # Larger for technical documentation
+
+mcpServer:
+  enabled: true
+  tools:
+    autoDiscover: false
+    explicit:
+      - kubectl
+      - proxmox_list_vms
+      - proxmox_vm_status
+      - cloudflare_list_zones
+      - cloudflare_get_dns_records
+      - sandfly_scan
+    timeout: 60  # Infrastructure commands can be slow
+
+distillation:
+  enabled: true
+  collection:
+    minSamples: 5000
+    qualityThreshold: 0.85
+  output:
+    type: "lora"
+    baseModel: "codellama/CodeLlama-7b-Instruct-hf"
+    loraRank: 32  # Higher rank for complex infra patterns
+  automation:
+    autoTrigger: false
+    schedule: "0 4 * * 0"  # Weekly Sunday 4AM

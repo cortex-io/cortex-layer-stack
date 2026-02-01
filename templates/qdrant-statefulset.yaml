@@ -1,0 +1,128 @@
+{{- if .Values.qdrant.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "cortex-layer-stack.qdrant.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cortex-layer-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: qdrant
+  annotations:
+    cortex.ai/burst-capable: "true"
+    cortex.ai/distillation-source: "vector-patterns"
+spec:
+  serviceName: {{ include "cortex-layer-stack.qdrant.name" . }}
+  replicas: {{ .Values.autoscaling.minReplicas }}
+  selector:
+    matchLabels:
+      {{- include "cortex-layer-stack.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: qdrant
+  template:
+    metadata:
+      labels:
+        {{- include "cortex-layer-stack.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: qdrant
+        cortex.ai/layer: {{ .Values.layer.name | quote }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "6333"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: qdrant
+          image: {{ .Values.qdrant.image.repository }}:{{ .Values.qdrant.image.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: 6333
+              protocol: TCP
+            - name: grpc
+              containerPort: 6334
+              protocol: TCP
+          env:
+            - name: QDRANT__SERVICE__HTTP_PORT
+              value: "6333"
+            - name: QDRANT__SERVICE__GRPC_PORT
+              value: "6334"
+            - name: QDRANT__CLUSTER__ENABLED
+              value: "false"
+            - name: QDRANT__TELEMETRY__DISABLED
+              value: {{ not .Values.qdrant.telemetry.enabled | quote }}
+          resources:
+            {{- toYaml .Values.qdrant.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          volumeMounts:
+            - name: qdrant-storage
+              mountPath: /qdrant/storage
+            {{- if .Values.qdrant.storage.snapshots.enabled }}
+            - name: qdrant-snapshots
+              mountPath: /qdrant/snapshots
+            {{- end }}
+      {{- if not .Values.qdrant.storage.enabled }}
+      volumes:
+        - name: qdrant-storage
+          emptyDir:
+            sizeLimit: {{ .Values.qdrant.storage.size }}
+      {{- end }}
+  {{- if .Values.qdrant.storage.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: qdrant-storage
+        labels:
+          {{- include "cortex-layer-stack.labels" . | nindent 10 }}
+          app.kubernetes.io/component: qdrant
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass }}
+        resources:
+          requests:
+            storage: {{ .Values.qdrant.storage.size }}
+    {{- if .Values.qdrant.storage.snapshots.enabled }}
+    - metadata:
+        name: qdrant-snapshots
+        labels:
+          {{- include "cortex-layer-stack.labels" . | nindent 10 }}
+          app.kubernetes.io/component: qdrant
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass }}
+        resources:
+          requests:
+            storage: 5Gi
+    {{- end }}
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cortex-layer-stack.qdrant.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cortex-layer-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: qdrant
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6333
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 6334
+      targetPort: grpc
+      protocol: TCP
+      name: grpc
+  selector:
+    {{- include "cortex-layer-stack.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: qdrant
+{{- end }}

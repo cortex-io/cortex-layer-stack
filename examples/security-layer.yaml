@@ -1,0 +1,58 @@
+# Example: Security Operations Layer
+# Deploy with: helm install security-layer ./cortex-layer-stack -f security-layer.yaml -n cortex-security
+
+layer:
+  name: security
+  description: "Security scanning, compliance, and incident response"
+  domain: "security.cortex.local"
+
+autoscaling:
+  enabled: true
+  idleTimeout: 300
+  minReplicas: 0
+  maxReplicas: 3  # Security scans can parallelize
+
+moeRouter:
+  enabled: true
+  routing:
+    topK: 1  # Security decisions should be precise
+    strategy: "round-robin"
+  telemetry:
+    enabled: true
+    captureDecisions: true
+    sampleRate: 1.0  # Capture everything for audit
+
+qdrant:
+  enabled: true
+  storage:
+    enabled: true
+    size: "30Gi"  # CVE database, compliance docs, threat intel
+    snapshots:
+      enabled: true
+      schedule: "0 */6 * * *"  # Every 6 hours
+      retention: 30  # Keep 30 days for compliance
+
+mcpServer:
+  enabled: true
+  tools:
+    autoDiscover: false
+    explicit:
+      - sandfly_scan
+      - trivy_scan
+      - falco_alerts
+      - vault_read
+      - compliance_check
+    timeout: 120  # Security scans can be lengthy
+
+# Higher scrutiny for security distillation
+distillation:
+  enabled: true
+  collection:
+    minSamples: 10000  # More samples needed for security
+    qualityThreshold: 0.95  # Very high quality bar
+  output:
+    type: "lora"
+    baseModel: "meta-llama/Llama-2-13b"  # Larger model for security
+    loraRank: 64
+  automation:
+    autoTrigger: false  # Manual approval for security models

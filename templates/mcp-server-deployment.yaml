@@ -1,0 +1,149 @@
+{{- if .Values.mcpServer.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cortex-layer-stack.mcpServer.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cortex-layer-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+  annotations:
+    cortex.ai/burst-capable: "true"
+    cortex.ai/distillation-source: "tool-invocations"
+spec:
+  replicas: {{ .Values.autoscaling.minReplicas }}
+  selector:
+    matchLabels:
+      {{- include "cortex-layer-stack.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mcp-server
+  template:
+    metadata:
+      labels:
+        {{- include "cortex-layer-stack.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: mcp-server
+        cortex.ai/layer: {{ .Values.layer.name | quote }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.observability.metrics.port }}"
+        prometheus.io/path: "{{ .Values.observability.metrics.path }}"
+    spec:
+      serviceAccountName: {{ include "cortex-layer-stack.mcpServer.name" . }}
+      containers:
+        - name: mcp-server
+          image: {{ include "cortex-layer-stack.image" (dict "root" . "image" .Values.mcpServer.image) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.mcpServer.protocol.port }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.observability.metrics.port }}
+              protocol: TCP
+          env:
+            - name: LAYER_NAME
+              value: {{ .Values.layer.name | quote }}
+            - name: MCP_TRANSPORT
+              value: {{ .Values.mcpServer.protocol.transport | quote }}
+            - name: MCP_PORT
+              value: {{ .Values.mcpServer.protocol.port | quote }}
+            - name: TOOL_AUTO_DISCOVER
+              value: {{ .Values.mcpServer.tools.autoDiscover | quote }}
+            - name: TOOL_TIMEOUT
+              value: {{ .Values.mcpServer.tools.timeout | quote }}
+            - name: MOE_ROUTER_HOST
+              value: {{ include "cortex-layer-stack.moeRouter.name" . }}
+            - name: MOE_ROUTER_PORT
+              value: "8080"
+            - name: QDRANT_HOST
+              value: {{ include "cortex-layer-stack.qdrant.name" . }}
+            - name: QDRANT_PORT
+              value: "6333"
+            - name: TELEMETRY_ENABLED
+              value: {{ .Values.mcpServer.telemetry.enabled | quote }}
+            - name: TELEMETRY_CAPTURE_INVOCATIONS
+              value: {{ .Values.mcpServer.telemetry.captureInvocations | quote }}
+            - name: TELEMETRY_CAPTURE_OUTCOMES
+              value: {{ .Values.mcpServer.telemetry.captureOutcomes | quote }}
+          resources:
+            {{- toYaml .Values.mcpServer.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: tool-config
+              mountPath: /config
+            {{- if .Values.mcpServer.telemetry.enabled }}
+            - name: telemetry-buffer
+              mountPath: /telemetry
+            {{- end }}
+      volumes:
+        - name: tool-config
+          configMap:
+            name: {{ include "cortex-layer-stack.mcpServer.name" . }}-config
+        {{- if .Values.mcpServer.telemetry.enabled }}
+        - name: telemetry-buffer
+          emptyDir:
+            sizeLimit: 500Mi
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cortex-layer-stack.mcpServer.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cortex-layer-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.mcpServer.protocol.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: {{ .Values.observability.metrics.port }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "cortex-layer-stack.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "cortex-layer-stack.mcpServer.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cortex-layer-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cortex-layer-stack.mcpServer.name" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cortex-layer-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+data:
+  tools.yaml: |
+    layer: {{ .Values.layer.name }}
+    autoDiscover: {{ .Values.mcpServer.tools.autoDiscover }}
+    timeout: {{ .Values.mcpServer.tools.timeout }}
+    {{- if .Values.mcpServer.tools.explicit }}
+    tools:
+      {{- range .Values.mcpServer.tools.explicit }}
+      - {{ . }}
+      {{- end }}
+    {{- end }}
+{{- end }}

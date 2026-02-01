@@ -1,0 +1,30 @@
+apiVersion: v2
+name: cortex-layer-stack
+description: |
+  A burst-capable, self-contained AI layer stack for Cortex.
+  Each layer gets its own MoE Router, Qdrant, and MCP Server that scale to zero
+  when idle and burst on demand. Designed for eventual distillation into
+  specialized models.
+
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+keywords:
+  - ai
+  - moe
+  - qdrant
+  - mcp
+  - burst
+  - serverless
+  - cortex
+
+maintainers:
+  - name: Ryan Dahlberg
+    email: ryan.dahlberg@gmail.com
+
+dependencies:
+  - name: keda
+    version: "2.12.0"
+    repository: "https://kedacore.github.io/charts"
+    condition: keda.enabled

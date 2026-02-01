@@ -1,0 +1,148 @@
+{{- if .Values.autoscaling.enabled }}
+# KEDA ScaledObject for MoE Router
+{{- if .Values.moeRouter.enabled }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "cortex-layer-stack.moeRouter.name" . }}-scaler
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cortex-layer-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: moe-router
+spec:
+  scaleTargetRef:
+    name: {{ include "cortex-layer-stack.moeRouter.name" . }}
+  minReplicaCount: {{ .Values.autoscaling.minReplicas }}
+  maxReplicaCount: {{ .Values.autoscaling.maxReplicas }}
+  cooldownPeriod: {{ .Values.autoscaling.cooldownPeriod }}
+  idleReplicaCount: 0
+  triggers:
+    {{- if .Values.autoscaling.triggers.http.enabled }}
+    - type: http
+      metadata:
+        hosts: {{ include "cortex-layer-stack.moeRouter.name" . }}.{{ .Release.Namespace }}.svc.cluster.local
+        targetPendingRequests: {{ .Values.autoscaling.triggers.http.metadata.targetPendingRequests | quote }}
+    {{- end }}
+    {{- if .Values.autoscaling.triggers.prometheus.enabled }}
+    - type: prometheus
+      metadata:
+        serverAddress: {{ .Values.autoscaling.triggers.prometheus.serverAddress }}
+        metricName: {{ .Values.autoscaling.triggers.prometheus.metricName }}
+        threshold: {{ .Values.autoscaling.triggers.prometheus.threshold | quote }}
+        query: |
+          sum(rate(moe_router_requests_total{layer="{{ .Values.layer.name }}"}[1m]))
+    {{- end }}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: {{ .Values.autoscaling.idleTimeout }}
+          policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 15
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 15
+            - type: Pods
+              value: 4
+              periodSeconds: 15
+          selectPolicy: Max
+{{- end }}
+---
+# KEDA ScaledObject for Qdrant (StatefulSet)
+{{- if .Values.qdrant.enabled }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "cortex-layer-stack.qdrant.name" . }}-scaler
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cortex-layer-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: qdrant
+spec:
+  scaleTargetRef:
+    name: {{ include "cortex-layer-stack.qdrant.name" . }}
+    kind: StatefulSet
+  minReplicaCount: {{ .Values.autoscaling.minReplicas }}
+  maxReplicaCount: 1  # Qdrant single-node for layer isolation
+  cooldownPeriod: {{ .Values.autoscaling.cooldownPeriod }}
+  idleReplicaCount: 0
+  triggers:
+    {{- if .Values.autoscaling.triggers.http.enabled }}
+    - type: http
+      metadata:
+        hosts: {{ include "cortex-layer-stack.qdrant.name" . }}.{{ .Release.Namespace }}.svc.cluster.local
+        targetPendingRequests: {{ .Values.autoscaling.triggers.http.metadata.targetPendingRequests | quote }}
+    {{- end }}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: {{ mul .Values.autoscaling.idleTimeout 2 }}  # Longer for stateful
+          policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 60
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+            - type: Pods
+              value: 1
+              periodSeconds: 15
+{{- end }}
+---
+# KEDA ScaledObject for MCP Server
+{{- if .Values.mcpServer.enabled }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "cortex-layer-stack.mcpServer.name" . }}-scaler
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cortex-layer-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+spec:
+  scaleTargetRef:
+    name: {{ include "cortex-layer-stack.mcpServer.name" . }}
+  minReplicaCount: {{ .Values.autoscaling.minReplicas }}
+  maxReplicaCount: {{ .Values.autoscaling.maxReplicas }}
+  cooldownPeriod: {{ .Values.autoscaling.cooldownPeriod }}
+  idleReplicaCount: 0
+  triggers:
+    {{- if .Values.autoscaling.triggers.http.enabled }}
+    - type: http
+      metadata:
+        hosts: {{ include "cortex-layer-stack.mcpServer.name" . }}.{{ .Release.Namespace }}.svc.cluster.local
+        targetPendingRequests: {{ .Values.autoscaling.triggers.http.metadata.targetPendingRequests | quote }}
+    {{- end }}
+    {{- if .Values.autoscaling.triggers.rabbitmq.enabled }}
+    - type: rabbitmq
+      metadata:
+        queueName: {{ .Values.autoscaling.triggers.rabbitmq.queueName }}
+        queueLength: {{ .Values.autoscaling.triggers.rabbitmq.queueLength | quote }}
+    {{- end }}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: {{ .Values.autoscaling.idleTimeout }}
+          policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 15
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 15
+            - type: Pods
+              value: 4
+              periodSeconds: 15
+          selectPolicy: Max
+{{- end }}
+{{- end }}

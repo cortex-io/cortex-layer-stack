@@ -1,0 +1,53 @@
+# Example: Network Operations Layer
+# Deploy with: helm install network-layer ./cortex-layer-stack -f networking-layer.yaml -n cortex-networking
+
+layer:
+  name: networking
+  description: "UniFi, DNS, load balancing, and network troubleshooting"
+  domain: "network.cortex.local"
+
+autoscaling:
+  enabled: true
+  idleTimeout: 180  # Networks need faster response
+  minReplicas: 0
+  maxReplicas: 2
+
+moeRouter:
+  enabled: true
+  routing:
+    topK: 2
+    strategy: "least-loaded"
+  model:
+    base: "sentence-transformers/all-mpnet-base-v2"  # Better for technical terms
+
+qdrant:
+  enabled: true
+  storage:
+    enabled: true
+    size: "15Gi"
+  collections:
+    vectorSize: 768
+
+mcpServer:
+  enabled: true
+  tools:
+    autoDiscover: false
+    explicit:
+      - unifi_devices
+      - unifi_clients
+      - cloudflare_list_zones
+      - cloudflare_get_dns_records
+      - ping
+      - traceroute
+      - dig
+    timeout: 30
+
+distillation:
+  enabled: true
+  collection:
+    minSamples: 8000
+    qualityThreshold: 0.88
+  output:
+    type: "lora"
+    baseModel: "codellama/CodeLlama-7b-Instruct-hf"
+    loraRank: 16
