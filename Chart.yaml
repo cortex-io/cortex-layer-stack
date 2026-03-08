@@ -21,7 +21,7 @@ keywords:
 
 maintainers:
   - name: Ryan Dahlberg
-    email: ryan.dahlberg@gmail.com
+    email: ""
 
 dependencies:
   - name: keda
