@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="800" height="800">
+  <defs>
+    <style>
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+      @keyframes dashFlow {
+        to { stroke-dashoffset: -40; }
+      }
+      @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .node-text { fill: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; text-anchor: middle; }
+      .node-label { fill: #58a6ff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; font-weight: 600; text-anchor: middle; }
+      .center-label { fill: #f0883e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; font-weight: 500; text-anchor: middle; }
+      .title-text { fill: #58a6ff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 11px; text-anchor: middle; text-transform: uppercase; letter-spacing: 2px; }
+      .flow-arrow { fill: none; stroke: #3fb950; stroke-width: 2.5; stroke-dasharray: 8 6; animation: dashFlow 1.5s linear infinite; }
+      .node-circle { fill: #161b22; stroke-width: 2; }
+      .pulse { animation: pulse 2.5s ease-in-out infinite; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="800" fill="#0d1117" rx="12"/>
+
+  <!-- Title -->
+  <text x="400" y="45" class="title-text">Cortex Layer Stack Lifecycle</text>
+
+  <!-- Circular flow path (invisible, for reference) -->
+  <!-- Nodes positioned in a circle, radius ~240, center at 400,420 -->
+
+  <!-- Flow arrows (circular path between nodes) -->
+  <!-- Deploy -> Operate -->
+  <path d="M 500,195 Q 590,240 620,330" class="flow-arrow"/>
+  <!-- Operate -> Collect -->
+  <path d="M 630,370 Q 620,480 560,570" class="flow-arrow"/>
+  <!-- Collect -> Distill -->
+  <path d="M 520,600 Q 430,650 320,600" class="flow-arrow"/>
+  <!-- Distill -> Graduate -->
+  <path d="M 270,570 Q 200,480 185,370" class="flow-arrow"/>
+  <!-- Graduate -> Deploy -->
+  <path d="M 190,330 Q 220,240 310,195" class="flow-arrow"/>
+
+  <!-- Node 1: Deploy (top) -->
+  <circle cx="400" cy="180" r="52" class="node-circle" stroke="#58a6ff"/>
+  <circle cx="400" cy="180" r="52" fill="none" stroke="#58a6ff" stroke-width="2" class="pulse" opacity="0.4"/>
+  <text x="400" y="175" class="node-label">Deploy</text>
+  <text x="400" y="195" class="node-text" font-size="11">generalist stack</text>
+
+  <!-- Node 2: Operate (right) -->
+  <circle cx="630" cy="350" r="52" class="node-circle" stroke="#3fb950"/>
+  <text x="630" y="345" class="node-label" fill="#3fb950">Operate</text>
+  <text x="630" y="365" class="node-text" font-size="11">handle tasks</text>
+
+  <!-- Node 3: Collect (bottom-right) -->
+  <circle cx="545" cy="590" r="52" class="node-circle" stroke="#f0883e"/>
+  <text x="545" y="585" class="node-label" fill="#f0883e">Collect</text>
+  <text x="545" y="605" class="node-text" font-size="11">telemetry</text>
+
+  <!-- Node 4: Distill (bottom-left) -->
+  <circle cx="255" cy="590" r="52" class="node-circle" stroke="#f0883e"/>
+  <text x="255" y="585" class="node-label" fill="#f0883e">Distill</text>
+  <text x="255" y="605" class="node-text" font-size="11">train model</text>
+
+  <!-- Node 5: Graduate (left) -->
+  <circle cx="170" cy="350" r="52" class="node-circle" stroke="#3fb950"/>
+  <circle cx="170" cy="350" r="52" fill="none" stroke="#3fb950" stroke-width="2" class="pulse" opacity="0.4"/>
+  <text x="170" y="345" class="node-label" fill="#3fb950">Graduate</text>
+  <text x="170" y="365" class="node-text" font-size="11">specialized model</text>
+
+  <!-- Center: Stack Components -->
+  <rect x="305" y="340" width="190" height="130" rx="10" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+  <text x="400" y="365" class="center-label">MoE Router</text>
+  <line x1="330" y1="378" x2="470" y2="378" stroke="#30363d" stroke-width="1"/>
+  <text x="400" y="398" class="center-label">Qdrant</text>
+  <line x1="330" y1="411" x2="470" y2="411" stroke="#30363d" stroke-width="1"/>
+  <text x="400" y="431" class="center-label">MCP Server</text>
+  <line x1="330" y1="444" x2="470" y2="444" stroke="#30363d" stroke-width="1"/>
+  <text x="400" y="462" class="center-label" font-size="11" fill="#8b949e">Telemetry</text>
+
+  <!-- Connecting lines from center to Operate and Collect -->
+  <line x1="495" y1="380" x2="578" y2="355" stroke="#30363d" stroke-width="1" stroke-dasharray="4 4"/>
+  <line x1="495" y1="440" x2="540" y2="540" stroke="#30363d" stroke-width="1" stroke-dasharray="4 4"/>
+
+  <!-- Subtitle -->
+  <text x="400" y="740" class="node-text" font-size="12" fill="#8b949e">Infrastructure as training data</text>
+  <text x="400" y="760" class="node-text" font-size="11" fill="#484f58">Deploy → Operate → Collect → Distill → Graduate → Repeat</text>
+</svg>
