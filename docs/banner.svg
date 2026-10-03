@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 200" width="900" height="200" role="img" aria-labelledby="t d">
+  <title id="t">cortex-layer-stack</title>
+  <desc id="d">cortex-k3s, part of the archived Cortex project: Helm chart for scale-to-zero AI service stacks, with telemetry-driven distillation.</desc>
+  <defs>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#58a6ff"/><stop offset="1" stop-color="#a371f7"/></linearGradient>
+    <radialGradient id="core" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#9ecbff"/><stop offset=".6" stop-color="#58a6ff"/><stop offset="1" stop-color="#7d5be0"/></radialGradient>
+    <radialGradient id="glow" cx="83%" cy="50%" r="40%"><stop offset="0" stop-color="#79c0ff" stop-opacity=".14"/><stop offset="1" stop-color="#79c0ff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <style>
+    .core{animation:core 6s ease-in-out infinite}@keyframes core{0%,100%{opacity:.55}50%{opacity:1}}
+    .spin{transform-origin:750px 100px;animation:spin 20s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.pod{animation:pod 2.7s ease-in-out infinite}@keyframes pod{0%,100%{opacity:.3}50%{opacity:1}}
+    @media (prefers-reduced-motion:reduce){*{animation:none!important}.pkt{display:none}}
+  </style>
+  <rect x="1" y="1" width="898" height="198" rx="16" fill="#0d1117" stroke="#30363d"/>
+  <rect x="1" y="1" width="898" height="198" rx="16" fill="url(#glow)"/>
+  <g transform="translate(32 40) scale(0.2344)"><path d="M378.9 170.0A150 150 0 1 0 378.9 342.0" fill="none" stroke="url(#ring)" stroke-width="34" stroke-linecap="round"/><g stroke="#58a6ff" stroke-opacity=".55" stroke-width="8"><line x1="256" y1="256" x2="331.0" y2="126.1"/><line x1="256" y1="256" x2="181.0" y2="126.1"/><line x1="256" y1="256" x2="106.0" y2="256.0"/><line x1="256" y1="256" x2="181.0" y2="385.9"/><line x1="256" y1="256" x2="331.0" y2="385.9"/></g><circle cx="331.0" cy="126.1" r="27" fill="#0d1117" stroke="#e6edf3" stroke-width="9"/><circle cx="181.0" cy="126.1" r="27" fill="#0d1117" stroke="#e6edf3" stroke-width="9"/><circle cx="106.0" cy="256.0" r="27" fill="#0d1117" stroke="#e6edf3" stroke-width="9"/><circle cx="181.0" cy="385.9" r="27" fill="#0d1117" stroke="#e6edf3" stroke-width="9"/><circle cx="331.0" cy="385.9" r="27" fill="#0d1117" stroke="#e6edf3" stroke-width="9"/><circle class="core" cx="256" cy="256" r="46" fill="url(#core)"/></g>
+  <text x="176" y="62" font-family='ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace' font-size="13" fill="#8b949e">cortex-io /</text>
+  <text x="174" y="106" font-family='"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif' font-size="40" font-weight="700" fill="#e6edf3" letter-spacing="-.5">cortex-layer-stack</text>
+  <text x="176" y="134" font-family='"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif' font-size="15.5" fill="#8b949e">Helm chart for scale-to-zero AI service</text>
+  <text x="176" y="155" font-family='"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif' font-size="15.5" fill="#8b949e">stacks, with telemetry-driven distillation.</text>
+  <rect x="270" y="48" width="84" height="20" rx="4" fill="none" stroke="#f0883e" stroke-width="1.5"/>
+  <text x="312" y="62" text-anchor="middle" font-family='ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace' font-size="10.5" font-weight="700" fill="#f0883e" letter-spacing="1.5">ARCHIVED</text>
+  <rect x="176" y="166" width="40" height="4" rx="2" fill="#79c0ff"/>
+  <path class="spin" d="M750 44L798 72V128L750 156 702 128V72Z" fill="none" stroke="#79c0ff" stroke-width="2.5" stroke-dasharray="9 6"/><circle cx="750" cy="100" r="16" fill="#161b22" stroke="#79c0ff" stroke-width="2"/><text x="750" y="104" text-anchor="middle" font-family='ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace' font-size="10" font-weight="700" fill="#79c0ff">helm</text><circle class="pod" style="animation-delay:0.0s" cx="750.0" cy="64.0" r="7" fill="#79c0ff"/><circle class="pod" style="animation-delay:0.45s" cx="781.2" cy="82.0" r="7" fill="#79c0ff"/><circle class="pod" style="animation-delay:0.9s" cx="781.2" cy="118.0" r="7" fill="#79c0ff"/><circle class="pod" style="animation-delay:1.35s" cx="750.0" cy="136.0" r="7" fill="#79c0ff"/><circle class="pod" style="animation-delay:1.8s" cx="718.8" cy="118.0" r="7" fill="#79c0ff"/><circle class="pod" style="animation-delay:2.25s" cx="718.8" cy="82.0" r="7" fill="#79c0ff"/>
+</svg>
