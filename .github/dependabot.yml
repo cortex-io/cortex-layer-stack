@@ -1,0 +1,13 @@
+# Dependabot version updates (free on private repos, unlike code scanning).
+# Dependabot alerts don't cover Helm charts, so version updates are how this
+# chart's dependencies get proposed upgrades.
+version: 2
+updates:
+  # Chart dependencies in Chart.yaml (keda) and images in values.yaml.
+  - package-ecosystem: "helm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
