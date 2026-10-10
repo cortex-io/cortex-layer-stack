@@ -97,7 +97,7 @@ qdrant:
   enabled: true
   image:
     repository: qdrant/qdrant
-    tag: v1.7.4
+    tag: 1.19.1
 
   resources:
     requests:
