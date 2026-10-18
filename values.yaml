@@ -97,7 +97,11 @@ qdrant:
   enabled: true
   image:
     repository: qdrant/qdrant
-    tag: v1.7.4
+    # Docker Hub only publishes v-prefixed tags (v1.19.1; 1.19.1 does not exist).
+    # Qdrant upgrades stored data one minor version at a time: a release that
+    # already holds data on v1.7.x must step through each minor version (or be
+    # restored from a snapshot) rather than jump straight to this tag.
+    tag: v1.19.1
 
   resources:
     requests:
